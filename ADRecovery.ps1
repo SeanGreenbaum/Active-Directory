@@ -5,7 +5,7 @@ PURPOSE: Combination of PS code to facilitate an AD Forest or Domain Recovery
          performed in strictly controlled environments. Using this script in a
          production environment could cause serious issues.
          
-   DATE: October 29th, 2022
+   DATE: November 7th, 2022
  AUTHOR: Sean Greenbaum (Sean.Greenbaum@Microsoft.com)
   USAGE: ADRecovery.ps1 -phase1 -NewAdminPassword
          ADRecovery.ps1 -phase2
@@ -29,7 +29,7 @@ PURPOSE: Combination of PS code to facilitate an AD Forest or Domain Recovery
          These are NOT the only steps involved in a Forest/Domain restore. Be sure to check out the documentation and include
          your own custom steps as needed.
          
- REVISION: 3.0
+ REVISION: 3.0.1
     Code rewrite to provide better output. Also modified to allow for running against only 1 domain instead of
     all domains in the forest. Useful if only performing a DFL uplift to one domain.
 
@@ -132,11 +132,11 @@ if ($Phase2)
     netdom query fsmo
     if ((Get-ADDomain).ParentDomain) #Not the root domain
     {
-    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) –OperationMasterRole 0,1,2, -force
+    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) â€“OperationMasterRole 0,1,2, -force
     }
     else #We are at the root
     {
-    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) –OperationMasterRole 0,1,2,3,4 -force
+    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) â€“OperationMasterRole 0,1,2,3,4 -force
     }
     netdom query fsmo
 
@@ -161,7 +161,7 @@ If ($Phase3)
             Write-Host "Current fSMORoleOwner: $($obj.fSMORoleOwner)" -ForegroundColor White
             Set-ADObject -Identity ("CN=Infrastructure,DC=ForestDNSZones," + $Domain.DistinguishedName) -Replace @{fSMORoleOwner=$IMFSMOntds}
             $obj = Get-ADObject -Identity ("CN=Infrastructure,DC=ForestDNSZones," + $Domain.DistinguishedName) -Properties *
-            Write-Host "    New fSMORoleOwner: $($obj.fSMORoleOwner)" -ForegroundColor White
+            Write-Host "`tNew fSMORoleOwner: $($obj.fSMORoleOwner)" -ForegroundColor White
         }
     }
     Write-Host "Verifying DomainDNSZones fSMORoleOwner" -ForegroundColor Green
@@ -175,13 +175,14 @@ If ($Phase3)
         Write-Host "`tNew fSMORoleOwner: $($obj.fSMORoleOwner)" -ForegroundColor White
     }
     #Increase RID pool and invalidate existing RID pool
+
     Write-Host "Increasing RID Pool" -ForegroundColor Green
-    $ridPath = “CN=RID Manager$,CN=System," + $domain.DistinguishedName
-    $rid=get-adobject $ridPath –properties *
+    $ridPath = "CN=RID Manager$,CN=System," + $domain.DistinguishedName
+    $rid = get-adobject $ridPath -properties *
     Write-Host "RID AvailablePool Before:" $rid.rIDAvailablePool -ForegroundColor Yellow
-    $rid.rIDAvailablePool=$rid.rIDAvailablePool+100000
-    Set-adobject –instance $rid
-    Write-Host "RID AvailablePool After: " $rid.rIDAvailablePool  -ForegroundColor Green
+    $rid.rIDAvailablePool = $rid.rIDAvailablePool+100000  
+    Set-ADObject -instance $rid
+    Write-Host "RID AvailablePool After: $($rid.rIDAvailablePool)"  -ForegroundColor Green
 
     Write-Host "Invalidating RID Pool" -ForegroundColor Green
     $Domain = New-Object System.DirectoryServices.DirectoryEntry
@@ -196,7 +197,7 @@ If ($Phase3)
 
     Write-Host "Attempting to generate new RID Pool" -ForegroundColor Green
     Write-Host "Expect an error to display. This is NORMAL." -ForegroundColor White -BackgroundColor Green
-    New-ADUser -Name “PullRidPool” -AccountPassword (ConvertTo-SecureString -AsPlainText “accountPassword1” -Force) -WarningAction SilentlyContinue -ErrorAction SilentlyContinue > $null
+    New-ADUser -Name "PullRidPool" -AccountPassword (ConvertTo-SecureString -AsPlainText "accountPassword1" -Force) -WarningAction SilentlyContinue -ErrorAction SilentlyContinue > $null
 
     Write-Host "Valid RID Pool" -ForegroundColor Green
     DCDiag /test:ridmanager /v | findstr /i "RID"
@@ -210,7 +211,6 @@ If ($Phase3)
     Write-Host "Resetting KRBTGT account password" -ForegroundColor Green
     $command = "net user krbtgt $(-join ((65..90) + (97..122) + (48..57) | Get-Random -Count 50 | % {[char]$_})) /domain"
     cmd /c $command
-    $command = "net user krbtgt $(-join ((65..90) + (97..122) + (48..57) | Get-Random -Count 50 | % {[char]$_})) /domain"
     cmd /c $command
 
     #Set time source for server and type (use your own time server or a public internet time server)
