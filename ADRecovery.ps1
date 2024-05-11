@@ -132,11 +132,11 @@ if ($Phase2)
     netdom query fsmo
     if ((Get-ADDomain).ParentDomain) #Not the root domain
     {
-    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) â€“OperationMasterRole 0,1,2, -force
+    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) -OperationMasterRole 0,1,2, -force
     }
     else #We are at the root
     {
-    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) â€“OperationMasterRole 0,1,2,3,4 -force
+    	Move-ADDirectoryServerOperationMasterRole -Identity $($env:COMPUTERNAME) -OperationMasterRole 0,1,2,3,4 -force
     }
     netdom query fsmo
 
@@ -197,7 +197,7 @@ If ($Phase3)
 
     Write-Host "Attempting to generate new RID Pool" -ForegroundColor Green
     Write-Host "Expect an error to display. This is NORMAL." -ForegroundColor White -BackgroundColor Green
-    New-ADUser -Name "PullRidPool" -AccountPassword (ConvertTo-SecureString -AsPlainText "accountPassword1" -Force) -WarningAction SilentlyContinue -ErrorAction SilentlyContinue > $null
+    New-ADUser -Name "PullRidPool" -AccountPassword (ConvertTo-SecureString -AsPlainText "accountPassword1" -Force) -WarningAction SilentlyContinue -ErrorAction SilentlyContinue > $null
 
     Write-Host "Valid RID Pool" -ForegroundColor Green
     DCDiag /test:ridmanager /v | findstr /i "RID"
